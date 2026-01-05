@@ -1,12 +1,21 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import { SnakeGame } from '@/components/game/SnakeGame';
 
-const Index = () => {
+const Index: React.FC = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Title */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-pixel text-glow animate-glow-pulse">
+          SNAKE ARCADE
+        </h1>
+        <p className="text-sm text-muted-foreground font-mono">
+          Classic gameplay • Two modes • Global leaderboard
+        </p>
       </div>
+      
+      {/* Game */}
+      <SnakeGame />
     </div>
   );
 };
