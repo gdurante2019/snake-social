@@ -24,6 +24,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/api/docs")
+
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(spectate.router, prefix="/api/spectate", tags=["Spectate"])

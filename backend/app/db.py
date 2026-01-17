@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 from .models import User, LeaderboardEntry, ActivePlayer, GameMode, Direction, Position
 
 # Simulated in-memory database
@@ -18,7 +18,7 @@ class MockDB:
             id=str(len(self.users) + 1),
             username=username,
             email=email,
-            createdAt=datetime.utcnow()
+            createdAt=datetime.now(timezone.utc)
         )
         self.users.append(user)
         self.user_creds[email] = password
@@ -38,7 +38,7 @@ class MockDB:
         return self.user_creds.get(email) == password
 
     def create_session(self, user_id: str) -> str:
-        token = f"mock-token-{user_id}-{int(datetime.utcnow().timestamp())}"
+        token = f"mock-token-{user_id}-{int(datetime.now(timezone.utc).timestamp())}"
         self.sessions[token] = user_id
         return token
 
@@ -91,3 +91,34 @@ db = MockDB()
 # Seed data
 db.create_user("SnakeMaster", "master@snake.io", "password")
 db.create_user("PixelViper", "viper@snake.io", "password")
+db.create_user("NeonSlither", "neon@snake.io", "password")
+
+# Seed Leaderboard
+from datetime import date
+db.add_leaderboard_entry(LeaderboardEntry(id="1", rank=0, username="SnakeMaster", score=2450, mode=GameMode.WALLS, date=date(2024, 12, 28)))
+db.add_leaderboard_entry(LeaderboardEntry(id="2", rank=0, username="PixelViper", score=2100, mode=GameMode.PASS_THROUGH, date=date(2024, 12, 29)))
+db.add_leaderboard_entry(LeaderboardEntry(id="3", rank=0, username="NeonSlither", score=1850, mode=GameMode.WALLS, date=date(2024, 12, 30)))
+db.add_leaderboard_entry(LeaderboardEntry(id="4", rank=0, username="ByteCrawler", score=1720, mode=GameMode.PASS_THROUGH, date=date(2024, 12, 27)))
+
+# Seed Active Players
+db.active_players.append(ActivePlayer(
+    id="p1", 
+    username="LivePlayer1", 
+    score=120, 
+    mode=GameMode.WALLS, 
+    snake=[Position(x=10, y=10), Position(x=9, y=10), Position(x=8, y=10)], 
+    food=Position(x=15, y=15), 
+    direction=Direction.RIGHT, 
+    startedAt=datetime.now(timezone.utc)
+))
+db.active_players.append(ActivePlayer(
+    id="p2", 
+    username="GamerX99", 
+    score=85, 
+    mode=GameMode.PASS_THROUGH, 
+    snake=[Position(x=5, y=5), Position(x=5, y=6), Position(x=5, y=7)], 
+    food=Position(x=2, y=2), 
+    direction=Direction.UP, 
+    startedAt=datetime.now(timezone.utc)
+))
+
