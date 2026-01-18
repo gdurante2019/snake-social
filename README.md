@@ -1,3 +1,5 @@
+(Below is text Lovable provides when you first create a GitHub repo in the Lovable project.  I've modified the original text to include the correct link to the project.  In addition, the project files have been updated as I have worked through the AI Dev Tools Zoomcamp exercises, using Google's Antigravity, to create a backend and integrate the backend and frontend for this app.)
+
 # Welcome to your Lovable project
 
 ## Project info
