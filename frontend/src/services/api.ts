@@ -141,7 +141,7 @@ export const api = {
   leaderboard: {
     getAll: async (mode?: GameMode): Promise<LeaderboardEntry[]> => {
       const query = mode ? `?mode=${mode}` : '';
-      const response = await fetch(`${API_PREFIX}/leaderboard${query}`, {
+      const response = await fetch(`${API_PREFIX}/leaderboard/${query}`, {
         headers: getHeaders(),
       });
       return handleResponse<LeaderboardEntry[]>(response);
@@ -152,7 +152,7 @@ export const api = {
         throw new Error('Must be logged in to submit score');
       }
 
-      const response = await fetch(`${API_PREFIX}/leaderboard`, {
+      const response = await fetch(`${API_PREFIX}/leaderboard/`, {
         method: 'POST',
         headers: getHeaders(currentToken),
         body: JSON.stringify({ score, mode }),
@@ -188,15 +188,89 @@ export const api = {
       const dy = food.y - head.y;
 
       if (Math.random() > 0.7) {
+        // AI Logic: Choose a new direction towards food, but avoid walls if in 'walls' mode
         const possibleDirections: Direction[] = [];
 
-        if (dx > 0 && currentDirection !== 'LEFT') possibleDirections.push('RIGHT');
-        if (dx < 0 && currentDirection !== 'RIGHT') possibleDirections.push('LEFT');
-        if (dy > 0 && currentDirection !== 'UP') possibleDirections.push('DOWN');
-        if (dy < 0 && currentDirection !== 'DOWN') possibleDirections.push('UP');
+        // Determine potential moves
+        const moves = [
+          { dir: 'UP', x: head.x, y: head.y - 1 },
+          { dir: 'DOWN', x: head.x, y: head.y + 1 },
+          { dir: 'LEFT', x: head.x - 1, y: head.y },
+          { dir: 'RIGHT', x: head.x + 1, y: head.y },
+        ] as const;
 
-        if (possibleDirections.length > 0) {
+        for (const move of moves) {
+          // Don't reverse
+          if (move.dir === 'UP' && currentDirection === 'DOWN') continue;
+          if (move.dir === 'DOWN' && currentDirection === 'UP') continue;
+          if (move.dir === 'LEFT' && currentDirection === 'RIGHT') continue;
+          if (move.dir === 'RIGHT' && currentDirection === 'LEFT') continue;
+
+          // Check bounds for Walls mode
+          if (player.mode === 'walls') {
+            if (move.x < 0 || move.x >= gridSize || move.y < 0 || move.y >= gridSize) {
+              continue;
+            }
+          }
+
+          // Check self-collision (avoid body)
+          if (snake.some(segment => segment.x === move.x && segment.y === move.y)) {
+            continue;
+          }
+
+          // Simple heuristic: Does it move closer to food?
+          // (Or just add it as a valid move and we pick best later, but original logic was random-ish)
+          possibleDirections.push(move.dir);
+        }
+
+        // Filter for "good" moves (towards food) if possible, otherwise pick any safe move
+        const betterMoves = possibleDirections.filter(d => {
+          if (d === 'UP' && dy < 0) return true;
+          if (d === 'DOWN' && dy > 0) return true;
+          if (d === 'LEFT' && dx < 0) return true;
+          if (d === 'RIGHT' && dx > 0) return true;
+          return false;
+        });
+
+        if (betterMoves.length > 0) {
+          newDirection = betterMoves[Math.floor(Math.random() * betterMoves.length)];
+        } else if (possibleDirections.length > 0) {
+          // If no move towards food is safe (or possible), pick any safe move (e.g. to avoid wall)
           newDirection = possibleDirections[Math.floor(Math.random() * possibleDirections.length)];
+        }
+      }
+
+      // Force turn if hitting wall in current direction (and we didn't change direction above OR random check failed)
+      // This is a safety net to prevent walking into walls
+      if (player.mode === 'walls') {
+        let nextX = head.x;
+        let nextY = head.y;
+        switch (newDirection) {
+          case 'UP': nextY--; break;
+          case 'DOWN': nextY++; break;
+          case 'LEFT': nextX--; break;
+          case 'RIGHT': nextX++; break;
+        }
+
+        if (nextX < 0 || nextX >= gridSize || nextY < 0 || nextY >= gridSize) {
+          // We are about to hit a wall! Panic and find ANY safe direction
+          const emergencyMoves = (['UP', 'DOWN', 'LEFT', 'RIGHT'] as Direction[]).filter(d => {
+            if (d === 'UP' && newDirection === 'DOWN') return false;
+            if (d === 'DOWN' && newDirection === 'UP') return false;
+            if (d === 'LEFT' && newDirection === 'RIGHT') return false;
+            if (d === 'RIGHT' && newDirection === 'LEFT') return false;
+
+            let tx = head.x, ty = head.y;
+            if (d === 'UP') ty--;
+            if (d === 'DOWN') ty++;
+            if (d === 'LEFT') tx--;
+            if (d === 'RIGHT') tx++;
+            return tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize;
+          });
+
+          if (emergencyMoves.length > 0) {
+            newDirection = emergencyMoves[0];
+          }
         }
       }
 
@@ -213,6 +287,24 @@ export const api = {
         if (newHead.x >= gridSize) newHead.x = 0;
         if (newHead.y < 0) newHead.y = gridSize - 1;
         if (newHead.y >= gridSize) newHead.y = 0;
+      } else {
+        // Clamp for walls mode just in case (rendering safety)
+        newHead.x = Math.max(0, Math.min(newHead.x, gridSize - 1));
+        newHead.y = Math.max(0, Math.min(newHead.y, gridSize - 1));
+      }
+
+      // Check Death (Self-collision)
+      if (snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+        // Respawn
+        const startX = Math.floor(Math.random() * (gridSize - 4)) + 2;
+        const startY = Math.floor(Math.random() * (gridSize - 4)) + 2;
+        return {
+          ...player,
+          snake: [{ x: startX, y: startY }, { x: startX - 1, y: startY }, { x: startX - 2, y: startY }],
+          score: 0,
+          direction: 'RIGHT',
+          food: { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) }
+        };
       }
 
       const ateFood = newHead.x === food.x && newHead.y === food.y;

@@ -3,7 +3,7 @@ import { GameState, Direction, Position, GameMode } from '@/types/game';
 import { api } from '@/services/api';
 
 const GRID_SIZE = 20;
-const INITIAL_SPEED = 150;
+const INITIAL_SPEED = 200;
 
 const getInitialSnake = (): Position[] => [
   { x: 10, y: 10 },

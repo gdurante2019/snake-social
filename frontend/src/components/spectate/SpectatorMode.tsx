@@ -10,6 +10,7 @@ export const SpectatorMode: React.FC = () => {
   const [activePlayers, setActivePlayers] = useState<ActivePlayer[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<ActivePlayer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterMode, setFilterMode] = useState<'all' | 'walls' | 'pass-through'>('all');
   const animationRef = useRef<number | null>(null);
 
   // Fetch active players
@@ -37,15 +38,15 @@ export const SpectatorMode: React.FC = () => {
     if (!selectedPlayer) return;
 
     const animate = () => {
-      setActivePlayers(prev => 
-        prev.map(player => 
-          player.id === selectedPlayer.id 
+      setActivePlayers(prev =>
+        prev.map(player =>
+          player.id === selectedPlayer.id
             ? api.spectate.simulateMovement(player)
             : player
         )
       );
 
-      setSelectedPlayer(prev => 
+      setSelectedPlayer(prev =>
         prev ? api.spectate.simulateMovement(prev) : null
       );
 
@@ -69,6 +70,21 @@ export const SpectatorMode: React.FC = () => {
     const players = await api.spectate.getActivePlayers();
     setActivePlayers(players);
   };
+
+  const filteredPlayers = activePlayers.filter(p => filterMode === 'all' || p.mode === filterMode);
+
+  // Auto-select first matching player when filter changes if current selection is invalid
+  useEffect(() => {
+    if (filteredPlayers.length > 0) {
+      // If no player selected, or selected player not in filtered list, select first
+      const isSelectedInList = selectedPlayer && filteredPlayers.some(p => p.id === selectedPlayer.id);
+      if (!isSelectedInList) {
+        setSelectedPlayer(filteredPlayers[0]);
+      }
+    } else {
+      setSelectedPlayer(null);
+    }
+  }, [filterMode, activePlayers]);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -96,17 +112,45 @@ export const SpectatorMode: React.FC = () => {
             </Button>
           </div>
 
+          {/* Filter Controls */}
+          <div className="flex gap-1 p-1 bg-muted/30 rounded-lg">
+            <Button
+              variant={filterMode === 'all' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="flex-1 h-7 text-xs"
+              onClick={() => setFilterMode('all')}
+            >
+              ALL
+            </Button>
+            <Button
+              variant={filterMode === 'walls' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="flex-1 h-7 text-xs"
+              onClick={() => setFilterMode('walls')}
+            >
+              WALLS
+            </Button>
+            <Button
+              variant={filterMode === 'pass-through' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="flex-1 h-7 text-xs"
+              onClick={() => setFilterMode('pass-through')}
+            >
+              INF
+            </Button>
+          </div>
+
           <div className="arcade-border bg-card divide-y divide-border">
             {isLoading ? (
               <div className="p-4 text-center">
                 <p className="font-pixel text-xs animate-pulse">LOADING...</p>
               </div>
-            ) : activePlayers.length === 0 ? (
+            ) : filteredPlayers.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground font-mono text-sm">
-                No active players
+                {activePlayers.length === 0 ? "No active players" : "No players in this mode"}
               </div>
             ) : (
-              activePlayers.map(player => (
+              filteredPlayers.map(player => (
                 <button
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}

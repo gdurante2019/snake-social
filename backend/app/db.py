@@ -193,6 +193,34 @@ class MockDB:
         current = self.high_scores[user_id].get(mode.value, 0)
         if score > current:
             self.high_scores[user_id][mode.value] = score
+            
+            # Update Leaderboard
+            user = self.get_user_by_id(user_id)
+            if user:
+                # Check if entry exists
+                existing = next((e for e in self.leaderboard if e.username == user.username and e.mode == mode), None)
+                if existing:
+                    existing.score = score
+                    existing.date = date.today()
+                else:
+                    self.leaderboard.append(LeaderboardEntry(
+                        id=str(len(self.leaderboard) + 100), # Dummy ID generation
+                        rank=0,
+                        username=user.username,
+                        score=score,
+                        mode=mode,
+                        date=date.today()
+                    ))
+                
+                # Re-sort and rank
+                self.leaderboard.sort(key=lambda x: x.score, reverse=True)
+                for i, e in enumerate(self.leaderboard):
+                    e.rank = i + 1
+                    
+                # Keep top 100
+                if len(self.leaderboard) > 100:
+                    self.leaderboard = self.leaderboard[:100]
+
             self.save_data()
             
     def get_high_score(self, user_id: str, mode: GameMode) -> int:
