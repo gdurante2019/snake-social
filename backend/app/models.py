@@ -62,3 +62,7 @@ class ScoreSubmission(BaseModel):
 class HighScoreSave(BaseModel):
     score: int
     mode: GameMode
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    new_password: str

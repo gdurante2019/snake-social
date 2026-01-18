@@ -1,0 +1,74 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "username": "SnakeMaster",
+      "email": "master@snake.io",
+      "createdAt": "2026-01-18T21:48:22.790076+00:00"
+    },
+    {
+      "id": "2",
+      "username": "PixelViper",
+      "email": "viper@snake.io",
+      "createdAt": "2026-01-18T21:48:22.793621+00:00"
+    },
+    {
+      "id": "3",
+      "username": "NeonSlither",
+      "email": "neon@snake.io",
+      "createdAt": "2026-01-18T21:48:22.793746+00:00"
+    },
+    {
+      "id": "4",
+      "username": "SnakeMaster2",
+      "email": "newsletterpromos70@gmail.com",
+      "createdAt": "2026-01-18T21:54:45.039990+00:00"
+    }
+  ],
+  "user_creds": {
+    "master@snake.io": "password",
+    "viper@snake.io": "password",
+    "neon@snake.io": "password",
+    "newsletterpromos70@gmail.com": "ncd5evw@VAT5bte_zkw"
+  },
+  "leaderboard": [
+    {
+      "id": "1",
+      "rank": 1,
+      "username": "SnakeMaster",
+      "score": 2450,
+      "mode": "walls",
+      "date": "2024-12-28"
+    },
+    {
+      "id": "2",
+      "rank": 2,
+      "username": "PixelViper",
+      "score": 2100,
+      "mode": "pass-through",
+      "date": "2024-12-29"
+    },
+    {
+      "id": "3",
+      "rank": 3,
+      "username": "NeonSlither",
+      "score": 1850,
+      "mode": "walls",
+      "date": "2024-12-30"
+    },
+    {
+      "id": "4",
+      "rank": 4,
+      "username": "ByteCrawler",
+      "score": 1720,
+      "mode": "pass-through",
+      "date": "2024-12-27"
+    }
+  ],
+  "high_scores": {
+    "1": {},
+    "2": {},
+    "3": {},
+    "4": {}
+  }
+}

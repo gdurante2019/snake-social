@@ -5,6 +5,16 @@ import { User } from '@/types/game';
 import { Gamepad2, Trophy, Eye, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DeleteAccountDialog } from "@/components/auth/DeleteAccountDialog";
+
 interface HeaderProps {
   user: User | null;
   onLogout: () => void;
@@ -52,16 +62,28 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
         {/* Auth */}
         <div className="flex items-center gap-2">
           {user ? (
-            <>
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-muted">
-                <UserIcon className="h-4 w-4 text-primary" />
-                <span className="font-mono text-sm">{user.username}</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={onLogout}>
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">LOGOUT</span>
-              </Button>
-            </>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2 px-3">
+                    <UserIcon className="h-4 w-4 text-primary" />
+                    <span className="font-mono text-sm max-w-[200px] truncate">{user.username}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 arcade-border bg-card">
+                  <DropdownMenuLabel className="font-pixel text-xs text-muted-foreground">MY ACCOUNT</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="font-pixel text-xs cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>LOGOUT</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <div className="p-2">
+                    <DeleteAccountDialog />
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <Link to="/auth">
               <Button variant="outline" size="sm">

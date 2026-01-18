@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '@/components/auth/AuthForm';
+import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AuthPageProps {
@@ -9,7 +10,8 @@ interface AuthPageProps {
 
 const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { login, signup, resetPassword } = useAuth();
+  const [view, setView] = React.useState<'auth' | 'reset'>('auth');
 
   const handleSuccess = () => {
     onAuthSuccess?.();
@@ -20,18 +22,29 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-pixel text-glow">
-          JOIN THE ARCADE
+          {view === 'auth' ? 'JOIN THE ARCADE' : 'ACCOUNT RECOVERY'}
         </h1>
         <p className="text-sm text-muted-foreground font-mono">
-          Create an account to save your scores and compete
+          {view === 'auth'
+            ? 'Create an account to save your scores and compete'
+            : 'Recover access to your high scores'}
         </p>
       </div>
 
-      <AuthForm
-        onLogin={login}
-        onSignup={signup}
-        onSuccess={handleSuccess}
-      />
+      {view === 'auth' ? (
+        <AuthForm
+          onLogin={login}
+          onSignup={signup}
+          onSuccess={handleSuccess}
+          onForgotPassword={() => setView('reset')}
+        />
+      ) : (
+        <ResetPasswordForm
+          onReset={resetPassword}
+          onBack={() => setView('auth')}
+          onSuccess={() => setView('auth')}
+        />
+      )}
     </div>
   );
 };

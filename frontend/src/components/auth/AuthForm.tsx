@@ -8,9 +8,10 @@ interface AuthFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   onSignup: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   onSuccess?: () => void;
+  onForgotPassword?: () => void;
 }
 
-export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onSignup, onSuccess }) => {
+export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onSignup, onSuccess, onForgotPassword }) => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,8 +63,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onSignup, onSuccess
             {mode === 'login' ? 'LOGIN' : 'SIGN UP'}
           </h2>
           <p className="text-sm text-muted-foreground font-mono">
-            {mode === 'login' 
-              ? 'Enter your credentials to continue' 
+            {mode === 'login'
+              ? 'Enter your credentials to continue'
               : 'Create an account to save scores'}
           </p>
         </div>
@@ -141,14 +142,24 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onSignup, onSuccess
           </Button>
         </form>
 
+        <div className="text-center space-y-2">
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors underline decoration-dotted"
+          >
+            Forgot Password?
+          </button>
+        </div>
+
         <div className="text-center">
           <button
             type="button"
             onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
             className="text-sm font-mono text-muted-foreground hover:text-primary transition-colors"
           >
-            {mode === 'login' 
-              ? "Don't have an account? Sign up" 
+            {mode === 'login'
+              ? "Don't have an account? Sign up"
               : 'Already have an account? Login'}
           </button>
         </div>

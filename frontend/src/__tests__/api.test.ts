@@ -1,161 +1,141 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+
+import { describe, it, expect, beforeEach, vi, afterEach, Mock } from 'vitest';
 import { api } from '@/services/api';
+
+// Mock global fetch
+global.fetch = vi.fn();
 
 describe('API Service', () => {
   beforeEach(() => {
-    // Clear session before each test
-    api.auth.persistSession(null);
+    // Clear mocks and localStorage
+    vi.clearAllMocks();
     localStorage.clear();
+    // Reset internal state of api (currentUser/token) if possible, or just rely on public methods
+    api.auth.persistSession(null);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const mockResponse = (data: any, ok: boolean = true) => {
+    (global.fetch as Mock).mockResolvedValue({
+      ok,
+      json: async () => data,
+    });
+  };
+
+  const mockErrorResponse = (message: string) => {
+    (global.fetch as Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ detail: message }),
+    });
+  };
+
   describe('Auth', () => {
-    it('should login with valid credentials', async () => {
-      const result = await api.auth.login('master@snake.io', 'password');
-      expect(result.user).toBeDefined();
-      expect(result.user.email).toBe('master@snake.io');
-      expect(result.token).toBeDefined();
+    it('should login and store token', async () => {
+      const mockUser = { id: '1', username: 'Test', email: 'test@example.com' };
+      const mockToken = 'jwt-token';
+
+      mockResponse({ user: mockUser, token: mockToken });
+
+      const result = await api.auth.login('test@example.com', 'password');
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com', password: 'password' }),
+      }));
+
+      expect(result.user).toEqual(mockUser);
+      expect(result.token).toEqual(mockToken);
+      expect(api.auth.getToken()).toEqual(mockToken);
+      expect(localStorage.getItem('snake_token')).toEqual(mockToken);
     });
 
-    it('should throw error for invalid email', async () => {
-      await expect(api.auth.login('invalid@email.com', 'password'))
-        .rejects.toThrow('Invalid email or password');
+    it('should handle login failure', async () => {
+      mockErrorResponse('Invalid credentials');
+
+      await expect(api.auth.login('bad@ex.com', 'pass'))
+        .rejects.toThrow('Invalid credentials');
     });
 
-    it('should throw error for short password', async () => {
-      await expect(api.auth.login('master@snake.io', '123'))
-        .rejects.toThrow('Invalid email or password');
+    it('should signup correctly', async () => {
+      const mockUser = { id: '2', username: 'New', email: 'new@example.com' };
+      mockResponse({ user: mockUser, token: 'new-token' });
+
+      await api.auth.signup('New', 'new@example.com', 'pass');
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/signup', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ username: 'New', email: 'new@example.com', password: 'pass' }),
+      }));
     });
 
-    it('should signup with valid data', async () => {
-      const result = await api.auth.signup('NewPlayer', 'new@player.io', 'password123');
-      expect(result.user).toBeDefined();
-      expect(result.user.username).toBe('NewPlayer');
-      expect(result.user.email).toBe('new@player.io');
-    });
+    it('should logout', async () => {
+      api.auth.persistSession({ id: '1', username: 'u', email: 'e' } as any, 'token');
+      mockResponse({});
 
-    it('should throw error for duplicate email on signup', async () => {
-      await expect(api.auth.signup('Test', 'master@snake.io', 'password123'))
-        .rejects.toThrow('Email already registered');
-    });
-
-    it('should throw error for short password on signup', async () => {
-      await expect(api.auth.signup('Test', 'unique@email.io', '123'))
-        .rejects.toThrow('Password must be at least 6 characters');
-    });
-
-    it('should persist and retrieve session', () => {
-      const mockUser = { id: '1', username: 'Test', email: 'test@test.io', createdAt: '2024-01-01' };
-      api.auth.persistSession(mockUser);
-      
-      const retrieved = api.auth.getSession();
-      expect(retrieved).toEqual(mockUser);
-    });
-
-    it('should clear session on logout', async () => {
-      const mockUser = { id: '1', username: 'Test', email: 'test@test.io', createdAt: '2024-01-01' };
-      api.auth.persistSession(mockUser);
-      
       await api.auth.logout();
-      api.auth.persistSession(null);
-      
-      const retrieved = api.auth.getSession();
-      expect(retrieved).toBeNull();
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/logout', expect.anything());
+      expect(api.auth.getToken()).toBeNull();
+      expect(localStorage.getItem('snake_token')).toBeNull();
     });
   });
 
   describe('Leaderboard', () => {
-    it('should fetch all leaderboard entries', async () => {
-      const entries = await api.leaderboard.getAll();
-      expect(Array.isArray(entries)).toBe(true);
-      expect(entries.length).toBeGreaterThan(0);
+    it('should fetch leaderboard', async () => {
+      const mockEntries = [{ id: '1', score: 100 }];
+      mockResponse(mockEntries);
+
+      const result = await api.leaderboard.getAll();
+      expect(result).toEqual(mockEntries);
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard', expect.anything());
     });
 
-    it('should filter leaderboard by mode', async () => {
-      const wallsEntries = await api.leaderboard.getAll('walls');
-      expect(wallsEntries.every(e => e.mode === 'walls')).toBe(true);
-
-      const passThrough = await api.leaderboard.getAll('pass-through');
-      expect(passThrough.every(e => e.mode === 'pass-through')).toBe(true);
+    it('should fetch leaderboard with mode', async () => {
+      mockResponse([]);
+      await api.leaderboard.getAll('walls');
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard?mode=walls', expect.anything());
     });
 
-    it('should have entries sorted by score descending', async () => {
-      const entries = await api.leaderboard.getAll();
-      for (let i = 1; i < entries.length; i++) {
-        expect(entries[i - 1].score).toBeGreaterThanOrEqual(entries[i].score);
-      }
-    });
-  });
+    it('should submit score', async () => {
+      api.auth.persistSession({} as any, 'token');
+      mockResponse({});
 
-  describe('Spectate', () => {
-    it('should fetch active players', async () => {
-      const players = await api.spectate.getActivePlayers();
-      expect(Array.isArray(players)).toBe(true);
-    });
+      await api.leaderboard.submitScore(100, 'walls');
 
-    it('should simulate movement correctly', () => {
-      const player = {
-        id: '1',
-        username: 'Test',
-        score: 0,
-        mode: 'pass-through' as const,
-        snake: [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }],
-        food: { x: 10, y: 5 },
-        direction: 'RIGHT' as const,
-        startedAt: new Date().toISOString(),
-      };
-
-      const updated = api.spectate.simulateMovement(player, 20);
-      
-      // Snake should have moved
-      expect(updated.snake).toBeDefined();
-      expect(updated.snake.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it('should handle pass-through mode wrapping', () => {
-      const player = {
-        id: '1',
-        username: 'Test',
-        score: 0,
-        mode: 'pass-through' as const,
-        snake: [{ x: 19, y: 5 }, { x: 18, y: 5 }, { x: 17, y: 5 }],
-        food: { x: 0, y: 5 },
-        direction: 'RIGHT' as const,
-        startedAt: new Date().toISOString(),
-      };
-
-      const updated = api.spectate.simulateMovement(player, 20);
-      
-      // Head should wrap to x: 0 when moving right from x: 19
-      // Note: AI might change direction, so we just verify the snake is valid
-      expect(updated.snake[0].x).toBeGreaterThanOrEqual(0);
-      expect(updated.snake[0].x).toBeLessThan(20);
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard', expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer token'
+        }),
+        body: JSON.stringify({ score: 100, mode: 'walls' }),
+      }));
     });
   });
 
-  describe('Game', () => {
-    beforeEach(() => {
-      localStorage.clear();
+  describe('Game High Score', () => {
+    it('should save high score to local storage and backend', async () => {
+      api.auth.persistSession({} as any, 'token');
+      mockResponse({});
+
+      await api.game.saveHighScore('walls', 500);
+
+      expect(localStorage.getItem('snake_highscore_walls')).toBe('500');
+      expect(global.fetch).toHaveBeenCalledWith('/api/game/highscore', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ score: 500, mode: 'walls' }),
+      }));
     });
 
-    it('should save high score', async () => {
-      await api.game.saveHighScore('walls', 100);
-      const saved = api.game.getHighScore('walls');
-      expect(saved).toBe(100);
-    });
+    it('should fetch high score from backend if logged in', async () => {
+      api.auth.persistSession({} as any, 'token');
+      mockResponse({ score: 1000 });
 
-    it('should not overwrite higher score with lower', async () => {
-      await api.game.saveHighScore('walls', 200);
-      await api.game.saveHighScore('walls', 100);
-      const saved = api.game.getHighScore('walls');
-      expect(saved).toBe(200);
-    });
-
-    it('should store separate high scores per mode', async () => {
-      await api.game.saveHighScore('walls', 150);
-      await api.game.saveHighScore('pass-through', 250);
-      
-      expect(api.game.getHighScore('walls')).toBe(150);
-      expect(api.game.getHighScore('pass-through')).toBe(250);
+      const score = await api.game.getHighScore('walls');
+      expect(score).toBe(1000);
+      expect(global.fetch).toHaveBeenCalledWith('/api/game/highscore?mode=walls', expect.anything());
     });
   });
 });

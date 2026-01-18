@@ -22,30 +22,48 @@ const generateFood = (snake: Position[]): Position => {
   return food;
 };
 
-const getInitialState = (mode: GameMode): GameState => ({
-  snake: getInitialSnake(),
-  food: generateFood(getInitialSnake()),
-  direction: 'RIGHT',
-  nextDirection: 'RIGHT',
-  score: 0,
-  highScore: api.game.getHighScore(mode),
-  status: 'idle',
-  mode,
-  gridSize: GRID_SIZE,
-  speed: INITIAL_SPEED,
-});
+const getInitialState = (mode: GameMode): GameState => {
+  // Initial synchronous read from local storage for immediate render
+  const key = `snake_highscore_${mode}`;
+  const localHigh = parseInt(localStorage.getItem(key) || '0');
+
+  return {
+    snake: getInitialSnake(),
+    food: generateFood(getInitialSnake()),
+    direction: 'RIGHT',
+    nextDirection: 'RIGHT',
+    score: 0,
+    highScore: localHigh,
+    status: 'idle',
+    mode,
+    gridSize: GRID_SIZE,
+    speed: INITIAL_SPEED,
+  };
+};
 
 export const useGameLogic = (initialMode: GameMode = 'walls') => {
   const [gameState, setGameState] = useState<GameState>(() => getInitialState(initialMode));
   const gameLoopRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(0);
 
+  // Fetch authoritative high score from backend
+  useEffect(() => {
+    api.game.getHighScore(gameState.mode).then(score => {
+      setGameState(prev => {
+        if (prev.mode === gameState.mode && score > prev.highScore) {
+          return { ...prev, highScore: score };
+        }
+        return prev;
+      });
+    });
+  }, [gameState.mode]);
+
   const moveSnake = useCallback((state: GameState): GameState => {
     const { snake, food, nextDirection, mode, gridSize } = state;
     const head = snake[0];
-    
+
     let newHead: Position = { ...head };
-    
+
     switch (nextDirection) {
       case 'UP':
         newHead.y -= 1;
@@ -81,7 +99,7 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
 
     // Check food collision
     const ateFood = newHead.x === food.x && newHead.y === food.y;
-    
+
     const newSnake = [newHead, ...snake];
     if (!ateFood) {
       newSnake.pop();
@@ -89,7 +107,7 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
 
     const newScore = ateFood ? state.score + 10 : state.score;
     const newHighScore = Math.max(newScore, state.highScore);
-    
+
     // Increase speed slightly when eating food
     const newSpeed = ateFood ? Math.max(50, state.speed - 2) : state.speed;
 
@@ -113,11 +131,11 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
       if (timestamp - lastUpdateRef.current >= prevState.speed) {
         lastUpdateRef.current = timestamp;
         const newState = moveSnake(prevState);
-        
+
         if (newState.status === 'game-over') {
           api.game.saveHighScore(prevState.mode, newState.score);
         }
-        
+
         return newState;
       }
 
@@ -140,9 +158,12 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
   }, [gameState.status, gameLoop]);
 
   const startGame = useCallback(() => {
+    // When starting, we trust current state's high score (which should be updated by useEffect)
+    // or we could fetch again, but that might delay start.
+    // Let's just reset state preserving high score.
     setGameState(prev => ({
       ...getInitialState(prev.mode),
-      highScore: api.game.getHighScore(prev.mode),
+      highScore: prev.highScore, // Keep current known high score
       status: 'playing',
     }));
     lastUpdateRef.current = 0;
@@ -158,7 +179,7 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
   const resetGame = useCallback(() => {
     setGameState(prev => ({
       ...getInitialState(prev.mode),
-      highScore: api.game.getHighScore(prev.mode),
+      highScore: prev.highScore,
     }));
   }, []);
 
@@ -171,20 +192,18 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
         LEFT: 'RIGHT',
         RIGHT: 'LEFT',
       };
-      
+
       if (opposites[newDirection] === prev.direction) {
         return prev;
       }
-      
+
       return { ...prev, nextDirection: newDirection };
     });
   }, []);
 
   const setMode = useCallback((mode: GameMode) => {
-    setGameState({
-      ...getInitialState(mode),
-      highScore: api.game.getHighScore(mode),
-    });
+    // Changing mode triggers the useEffect key, so it will fetch high score automatically
+    setGameState(getInitialState(mode));
   }, []);
 
   // Keyboard controls

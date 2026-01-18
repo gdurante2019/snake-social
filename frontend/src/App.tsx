@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import SpectatePage from "./pages/SpectatePage";
+import { AuthProvider } from "@/context/AuthContext";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,14 +38,18 @@ const AppContent = () => {
   );
 };
 
+
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

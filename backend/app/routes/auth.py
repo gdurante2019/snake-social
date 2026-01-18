@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from ..deps import get_current_user
-from ..models import LoginRequest, SignupRequest, AuthResponse, User
+from ..models import LoginRequest, SignupRequest, AuthResponse, User, ResetPasswordRequest
 from ..db import db
 
 router = APIRouter()
@@ -41,6 +41,23 @@ async def logout(current_user: User = Depends(get_current_user)):
     # But with our mock session store, we can verify the token
     # For now, just return success
     return {"message": "Logout successful"}
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(data: ResetPasswordRequest):
+    if not db.get_user_by_email(data.email):
+        # For debugging purposes, exposing that user doesn't exist
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email not found",
+        )
+        
+    db.update_password(data.email, data.new_password)
+    return {"message": "Password updated successfully"}
+
+@router.delete("/delete", status_code=status.HTTP_200_OK)
+async def delete_account(current_user: User = Depends(get_current_user)):
+    db.delete_user(current_user.id)
+    return {"message": "Account deleted successfully"}
 
 @router.get("/me", response_model=User)
 async def get_me(current_user: User = Depends(get_current_user)):
