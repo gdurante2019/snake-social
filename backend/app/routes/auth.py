@@ -1,62 +1,69 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from ..deps import get_current_user
-from ..models import LoginRequest, SignupRequest, AuthResponse, User, ResetPasswordRequest
-from ..db import db
+from sqlalchemy.ext.asyncio import AsyncSession
+from ..deps import get_current_user, get_db, oauth2_scheme
+from ..schemas import LoginRequest, SignupRequest, AuthResponse, User, ResetPasswordRequest
+from .. import crud
 
 router = APIRouter()
 
 @router.post("/login", response_model=AuthResponse)
-async def login(data: LoginRequest):
-    user = db.get_user_by_email(data.email)
-    if not user or not db.verify_password(data.email, data.password):
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    user = await crud.get_user_by_email(db, data.email)
+    # Simple password check (plaintext as per migration plan/legacy)
+    if not user or user.hashed_password != data.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
     
-    token = db.create_session(user.id)
+    token = await crud.create_session(db, user.id)
     return AuthResponse(user=user, token=token)
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def signup(data: SignupRequest):
-    if db.get_user_by_email(data.email):
+async def signup(data: SignupRequest, db: AsyncSession = Depends(get_db)):
+    if await crud.get_user_by_email(db, data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
     
-    if db.get_user_by_username(data.username):
+    if await crud.get_user_by_username(db, data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken",
         )
         
-    user = db.create_user(data.username, data.email, data.password)
-    token = db.create_session(user.id)
+    user = await crud.create_user(db, data)
+    token = await crud.create_session(db, user.id)
     return AuthResponse(user=user, token=token)
 
 @router.post("/logout")
-async def logout(current_user: User = Depends(get_current_user)):
-    # In a real JWT stateless setup, we can't really logout without a blocklist
-    # But with our mock session store, we can verify the token
-    # For now, just return success
+async def logout(
+    current_user: User = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+):
+    await crud.delete_session(db, token)
     return {"message": "Logout successful"}
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
-async def reset_password(data: ResetPasswordRequest):
-    if not db.get_user_by_email(data.email):
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    if not await crud.get_user_by_email(db, data.email):
         # For debugging purposes, exposing that user doesn't exist
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Email not found",
         )
         
-    db.update_password(data.email, data.new_password)
+    await crud.update_password(db, data.email, data.new_password)
     return {"message": "Password updated successfully"}
 
 @router.delete("/delete", status_code=status.HTTP_200_OK)
-async def delete_account(current_user: User = Depends(get_current_user)):
-    db.delete_user(current_user.id)
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    await crud.delete_user(db, current_user.id)
     return {"message": "Account deleted successfully"}
 
 @router.get("/me", response_model=User)
