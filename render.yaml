@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: snake-social-app
+    runtime: docker
+    region: oregon 
+    plan: free 
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: snake-social-db
+          property: connectionString
+    autoDeploy: true
+
+databases:
+  - name: snake-social-db
+    databaseName: snake_social
+    user: snake_user
+    plan: free 
+    region: oregon
