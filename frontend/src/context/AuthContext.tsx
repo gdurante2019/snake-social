@@ -32,8 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = useCallback(async (email: string, password: string) => {
         setAuthState(prev => ({ ...prev, isLoading: true }));
         try {
-            const { user } = await api.auth.login(email, password);
-            api.auth.persistSession(user);
+            const { user, token } = await api.auth.login(email, password);
+            api.auth.persistSession(user, token);
             setAuthState({
                 user,
                 isAuthenticated: true,
@@ -52,8 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const signup = useCallback(async (username: string, email: string, password: string) => {
         setAuthState(prev => ({ ...prev, isLoading: true }));
         try {
-            const { user } = await api.auth.signup(username, email, password);
-            api.auth.persistSession(user);
+            const { user, token } = await api.auth.signup(username, email, password);
+            api.auth.persistSession(user, token);
             setAuthState({
                 user,
                 isAuthenticated: true,

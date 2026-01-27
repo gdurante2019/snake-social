@@ -130,17 +130,13 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
 
       if (timestamp - lastUpdateRef.current >= prevState.speed) {
         lastUpdateRef.current = timestamp;
-        const newState = moveSnake(prevState);
-
-        if (newState.status === 'game-over') {
-          api.game.saveHighScore(prevState.mode, newState.score);
-        }
-
-        return newState;
+        return moveSnake(prevState);
       }
 
       return prevState;
     });
+
+
 
     gameLoopRef.current = requestAnimationFrame(gameLoop);
   }, [moveSnake]);
@@ -156,6 +152,14 @@ export const useGameLogic = (initialMode: GameMode = 'walls') => {
       }
     };
   }, [gameState.status, gameLoop]);
+
+  // Handle Game Over Side Effects
+  useEffect(() => {
+    if (gameState.status === 'game-over') {
+      console.log('Game Over detected in effect. Score:', gameState.score);
+      api.game.saveHighScore(gameState.mode, gameState.score);
+    }
+  }, [gameState.status, gameState.mode, gameState.score]);
 
   const startGame = useCallback(() => {
     // When starting, we trust current state's high score (which should be updated by useEffect)

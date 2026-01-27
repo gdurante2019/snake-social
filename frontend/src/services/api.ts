@@ -121,6 +121,10 @@ export const api = {
     },
 
     getToken: (): string | null => {
+      // Lazy refresh from storage if null
+      if (!currentToken) {
+        currentToken = localStorage.getItem('snake_token');
+      }
       return currentToken;
     },
 
@@ -149,21 +153,69 @@ export const api = {
     },
 
     submitScore: async (score: number, mode: GameMode): Promise<LeaderboardEntry | null> => {
-      if (!currentToken) {
-        throw new Error('Must be logged in to submit score');
+      console.log('Attempting to submit score:', score, mode);
+      const token = api.auth.getToken();
+
+      if (!token) {
+        console.warn('Cannot submit score: No auth token found.');
+        return null;
       }
 
-      const response = await fetch(`${API_PREFIX}/leaderboard/`, {
-        method: 'POST',
-        headers: getHeaders(currentToken),
-        body: JSON.stringify({ score, mode }),
-      });
+      console.log('Token found, sending request...');
+      try {
+        const response = await fetch(`${API_PREFIX}/leaderboard/`, { // Note: Backend route is /api/leaderboard/ (add_leaderboard_entry) or /api/game/highscore?
+          // Wait, backend/app/routes/leaderboard.py usually handles GET.
+          // backend/app/routes/game.py usually handles POST highscore.
+          // Let's check where the POST request should go.
+          // api.ts said /api/leaderboard/ in the original code? 
+          // NO! The original code hadTWO implementations?
+          // Lines 156-160: fetch(`${API_PREFIX}/leaderboard/`)
+          // Lines 347-351: fetch(`${API_PREFIX}/game/highscore`)
 
-      return handleResponse<LeaderboardEntry | null>(response);
+          // Debugging: The original file had `api.leaderboard.submitScore` AND `api.game.saveHighScore`.
+          // `useGameLogic` calls `api.game.saveHighScore`.
+          // `api.game.saveHighScore` calls `/api/game/highscore`. (Line 347)
+
+          method: 'POST',
+          headers: getHeaders(token),
+          body: JSON.stringify({ score, mode }),
+        });
+        return handleResponse<LeaderboardEntry | null>(response);
+      } catch (err) {
+        console.error('Submit score failed:', err);
+        throw err;
+      }
     },
   },
 
-  spectate: {
+  game: {
+    saveHighScore: async (mode: GameMode, score: number): Promise<void> => {
+      console.log('saveHighScore called:', mode, score);
+      // Also save locally for offline access/fallback
+      const key = `snake_highscore_${mode}`;
+      const current = parseInt(localStorage.getItem(key) || '0');
+      if (score > current) {
+        localStorage.setItem(key, String(score));
+      }
+
+      const token = api.auth.getToken();
+      if (token) {
+        try {
+          // Check route: /api/game/highscore
+          console.log('Sending POST to /api/game/highscore');
+          await fetch(`${API_PREFIX}/game/highscore`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify({ score, mode }),
+          });
+          console.log('Score submitted successfully');
+        } catch (e) {
+          console.error('Failed to save high score to backend', e);
+        }
+      } else {
+        console.warn('Skipping backend save: No Token');
+      }
+    },
     getActivePlayers: async (): Promise<ActivePlayer[]> => {
       const response = await fetch(`${API_PREFIX}/spectate/active`, {
         headers: getHeaders(),
@@ -335,6 +387,7 @@ export const api = {
 
   game: {
     saveHighScore: async (mode: GameMode, score: number): Promise<void> => {
+      console.log('saveHighScore called:', mode, score);
       // Also save locally for offline access/fallback
       const key = `snake_highscore_${mode}`;
       const current = parseInt(localStorage.getItem(key) || '0');
@@ -342,16 +395,21 @@ export const api = {
         localStorage.setItem(key, String(score));
       }
 
-      if (currentToken) {
+      const token = api.auth.getToken();
+      if (token) {
         try {
+          console.log('Sending POST to /api/game/highscore');
           await fetch(`${API_PREFIX}/game/highscore`, {
             method: 'POST',
-            headers: getHeaders(currentToken),
+            headers: getHeaders(token),
             body: JSON.stringify({ score, mode }),
           });
+          console.log('Score submitted successfully');
         } catch (e) {
           console.error('Failed to save high score to backend', e);
         }
+      } else {
+        console.warn('Skipping backend save: No Token found. Current User:', currentUser);
       }
     },
 
