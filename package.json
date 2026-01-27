@@ -1,0 +1,29 @@
+{
+  "name": "snake-social",
+  "version": "1.0.0",
+  "description": "_Below is text Lovable provides when you first create a GitHub repo in the Lovable project.  I've modified the original text to include the correct link to the project.  To see the changes and progress on the game (using Google's Antigravity as a coding partner), visit my AI Dev Tools Zoomcamp repo at https://github.com/gdurante2019/AI_DevTools_Zoomcamp._",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload",
+    "dev": "concurrently -n \"FRONTEND,BACKEND\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && uv run pytest",
+    "test": "npm run test:backend && npm run test:frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gdurante2019/snake-social.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/gdurante2019/snake-social/issues"
+  },
+  "homepage": "https://github.com/gdurante2019/snake-social#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
