@@ -16,6 +16,7 @@ const getHeaders = (token?: string) => {
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error('API Error:', response.status, errorData);
     let errorMessage = errorData.detail || 'API request failed';
 
     if (typeof errorMessage !== 'string') {
