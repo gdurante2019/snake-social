@@ -188,34 +188,7 @@ export const api = {
     },
   },
 
-  game: {
-    saveHighScore: async (mode: GameMode, score: number): Promise<void> => {
-      console.log('saveHighScore called:', mode, score);
-      // Also save locally for offline access/fallback
-      const key = `snake_highscore_${mode}`;
-      const current = parseInt(localStorage.getItem(key) || '0');
-      if (score > current) {
-        localStorage.setItem(key, String(score));
-      }
-
-      const token = api.auth.getToken();
-      if (token) {
-        try {
-          // Check route: /api/game/highscore
-          console.log('Sending POST to /api/game/highscore');
-          await fetch(`${API_PREFIX}/game/highscore`, {
-            method: 'POST',
-            headers: getHeaders(token),
-            body: JSON.stringify({ score, mode }),
-          });
-          console.log('Score submitted successfully');
-        } catch (e) {
-          console.error('Failed to save high score to backend', e);
-        }
-      } else {
-        console.warn('Skipping backend save: No Token');
-      }
-    },
+  spectate: {
     getActivePlayers: async (): Promise<ActivePlayer[]> => {
       const response = await fetch(`${API_PREFIX}/spectate/active`, {
         headers: getHeaders(),
