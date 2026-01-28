@@ -23,7 +23,7 @@ from app.core.config import settings
 from app import models_sql # Register models
 
 target_metadata = Base.metadata
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.ASYNC_DATABASE_URL)
 
 
 # other values from the config, defined by the needs of env.py,
