@@ -23,11 +23,6 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     globals: true,
-    environment: "jsdom",
-    server: {
-      deps: {
-        inline: ["@exodus/bytes", "html-encoding-sniffer"],
-      },
-    },
+    environment: "happy-dom",
   },
 }));
