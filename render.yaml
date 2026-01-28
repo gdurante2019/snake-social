@@ -9,7 +9,7 @@ services:
         fromDatabase:
           name: snake-social-db
           property: connectionString
-    autoDeploy: true
+    autoDeploy: false
 
 databases:
   - name: snake-social-db
