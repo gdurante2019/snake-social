@@ -90,13 +90,13 @@ describe('API Service', () => {
 
       const result = await api.leaderboard.getAll();
       expect(result).toEqual(mockEntries);
-      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard/', expect.anything());
     });
 
     it('should fetch leaderboard with mode', async () => {
       mockResponse([]);
       await api.leaderboard.getAll('walls');
-      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard?mode=walls', expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard/?mode=walls', expect.anything());
     });
 
     it('should submit score', async () => {
@@ -105,7 +105,7 @@ describe('API Service', () => {
 
       await api.leaderboard.submitScore(100, 'walls');
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/leaderboard/', expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
           'Authorization': 'Bearer token'
