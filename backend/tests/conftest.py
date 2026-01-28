@@ -10,18 +10,24 @@ from app.core.config import settings
 # Use in-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+@pytest_asyncio.fixture(scope="session")
+async def test_engine():
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    yield engine
+    await engine.dispose()
 
 @pytest_asyncio.fixture
-async def db_session():
-    async with engine.begin() as conn:
+async def db_session(test_engine):
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
+    # Create a new session factory bound to this engine
+    TestingSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+
     async with TestingSessionLocal() as session:
         yield session
         
-    async with engine.begin() as conn:
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 @pytest_asyncio.fixture
